@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>⚓ Batalla Naval - Edición Maestra</title>
+    <!-- Google Fonts & SignalR -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;800;900&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/styles.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/7.0.5/signalr.min.js"></script>
+</head>
+<body>
+    <div class="cyber-bg"></div>
+    <div class="grid-overlay"></div>
+
+    <!-- Encabezado Principal -->
+    <header class="app-header">
+        <div class="logo-container">
+            <span class="radar-icon">📡</span>
+            <h1>BATALLA <span>NAVAL</span></h1>
+            <span class="version-badge">EDICIÓN MAESTRA</span>
+        </div>
+
+        <div class="header-actions">
+            <button id="btnVoiceToggle" class="btn btn-secondary" onclick="toggleVoice()">🔊 Voces: ON</button>
+            <button class="btn btn-secondary" onclick="openLeaderboard()">🏆 Récords & Logros</button>
+            <div class="header-stats" id="headerStats" style="display: none;">
+                <div class="stat-box">
+                    <span class="stat-label">TURNO DE</span>
+                    <span class="stat-value highlight" id="turnIndicator">Comandante</span>
+                </div>
+                <div class="stat-box">
+                    <span class="stat-label">PRECISIÓN</span>
+                    <span class="stat-value" id="accuracyStat">0%</span>
+                </div>
+                <div class="stat-box">
+                    <span class="stat-label">RIVALES</span>
+                    <span class="stat-value danger" id="enemyShipsStat">5/5</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Contenedor Principal -->
+    <main class="main-container">
+
+        <!-- Modal de Inicio de Juego -->
+        <section class="game-card modal-section" id="startModal">
+            <div class="modal-content">
+                <h2>⚡ CENTRO DE COMANDO TÁCTICO ⚡</h2>
+                <p class="subtitle">Configura las operaciones de combate naval</p>
+                
+                <div class="form-group">
+                    <label for="p1NameInput">Nombre del Comandante:</label>
+                    <input type="text" id="p1NameInput" value="Comandante Alfa" maxlength="20">
+                </div>
+
+                <div class="form-group" id="mapGroup">
+                    <label for="mapTypeSelect">Tipo de Mapa & Terreno:</label>
+                    <select id="mapTypeSelect">
+                        <option value="Standard" selected>🌊 Mar Estándar Libre</option>
+                        <option value="Archipelago">🏔️ Archipiélago (Islas de Piedra)</option>
+                        <option value="Minefield">💣 Campo de Minas Navales</option>
+                    </select>
+                </div>
+
+                <div class="form-group" id="difficultyGroup">
+                    <label for="difficultySelect">Dificultad de la Inteligencia Artificial:</label>
+                    <select id="difficultySelect">
+                        <option value="Easy">🌱 FÁCIL (Disparos Aleatorios)</option>
+                        <option value="Normal" selected>⚔️ NORMAL (Búsqueda Hunt & Target)</option>
+                        <option value="Impossible">🔥 IMPLACABLE (IA Experta por Mapa Térmico)</option>
+                    </select>
+                </div>
+
+                <div class="mode-selector">
+                    <button class="btn btn-mode active" id="btnVsAi" onclick="setMode('ai')">
+                        <span class="icon">🤖</span>
+                        <div class="btn-text">
+                            <strong>1 JUGADOR VS IA</strong>
+                            <small>Enfréntate a la IA en el nivel de dificultad seleccionado</small>
+                        </div>
+                    </button>
+                    <button class="btn btn-mode" id="btnVsCampaign" onclick="setMode('campaign')">
+                        <span class="icon">🎮</span>
+                        <div class="btn-text">
+                            <strong>MODO CAMPAÑA DE MISIONES</strong>
+                            <small>Supera 5 operaciones tácticas progresivas con objetivos únicos</small>
+                        </div>
+                    </button>
+                    <button class="btn btn-mode" id="btnVsPvp" onclick="setMode('pvp')">
+                        <span class="icon">👥</span>
+                        <div class="btn-text">
+                            <strong>2 JUGADORES LOCAL</strong>
+                            <small>Pasa el control en la misma pantalla</small>
+                        </div>
+                    </button>
+                    <button class="btn btn-mode" id="btnVsOnline" onclick="setMode('online')">
+                        <span class="icon">🌐</span>
+                        <div class="btn-text">
+                            <strong>MULTIJUGADOR ONLINE (SIGNALR)</strong>
+                            <small>Crea o únete a una sala mediante Código de Sala de 4 letras</small>
+                        </div>
+                    </button>
+                </div>
+
+                <div class="form-group" id="roomCodeGroup" style="display: none;">
+                    <label for="roomCodeInput">Código de Sala (4 Letras para unirse):</label>
+                    <input type="text" id="roomCodeInput" placeholder="Ej: NAV9" maxlength="4" style="text-transform: uppercase;">
+                </div>
+
+                <button class="btn btn-primary btn-large" onclick="startGame()">
+                    🚀 INICIAR OPERACIÓN NAVAL
+                </button>
+            </div>
+        </section>
+
+        <!-- Barra de Habilidades y Power-ups Tácticos -->
+        <section class="powerups-bar" id="powerupsBar" style="display: none;">
+            <button class="powerup-btn" id="btnPowerupSonar" onclick="selectPowerUp('Sonar')">
+                📡 SONAR (3x3)
+            </button>
+            <button class="powerup-btn" id="btnPowerupAirstrike" onclick="selectPowerUp('Airstrike')">
+                🚀 ATAQUE AÉREO (3 Casillas)
+            </button>
+            <button class="powerup-btn" id="btnPowerupDepthBomb" onclick="selectPowerUp('DepthBomb')">
+                💣 BOMBA DE PROFUNDIDAD (Cruz 5)
+            </button>
+        </section>
+
+        <!-- Panel de Colocación de Flota (Fase de Setup) -->
+        <section class="setup-panel" id="setupPanel" style="display: none;">
+            <div class="setup-header">
+                <h2>⚓ COLOCACIÓN DE LA FLOTA</h2>
+                <p>Haz clic en una casilla para colocar el barco seleccionado o ubica automáticamente toda la flota.</p>
+            </div>
+
+            <div class="ship-selector-container">
+                <div class="ships-list" id="shipsList"></div>
+                <div class="setup-controls">
+                    <button class="btn btn-secondary" onclick="toggleOrientation()">
+                        🔄 Rotar Barco: <strong id="orientationLabel">HORIZONTAL (H)</strong>
+                    </button>
+                    <button class="btn btn-accent" onclick="autoPlaceFleet()">
+                        🎲 Ubicación Aleatoria
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Zona Principal de Juego: Tableros Duales -->
+        <section class="boards-container" id="boardsContainer" style="display: none;">
+            
+            <!-- Tablero 1: Mi Flota / Defensa -->
+            <div class="board-wrapper">
+                <div class="board-header">
+                    <h3>🛡️ MI FLOTA (DEFENSA)</h3>
+                    <span class="board-badge player-badge" id="myBoardBadge">Comandante</span>
+                </div>
+                <div class="board-grid-container">
+                    <div class="board-grid" id="myBoard"></div>
+                </div>
+                <div class="fleet-status-panel" id="myFleetStatus"></div>
+            </div>
+
+            <!-- Tablero 2: Radar de Ataque / Ofensiva -->
+            <div class="board-wrapper radar-wrapper">
+                <div class="board-header">
+                    <h3>🎯 RADAR DE ATAQUE (OFENSIVA)</h3>
+                    <span class="board-badge enemy-badge" id="enemyBoardBadge">Rival</span>
+                </div>
+                <div class="board-grid-container">
+                    <div class="radar-sweep"></div>
+                    <div class="board-grid" id="attackBoard"></div>
+                </div>
+                <div class="fleet-status-panel" id="enemyFleetStatus"></div>
+            </div>
+
+        </section>
+
+        <!-- Terminal de Registro de Eventos -->
+        <section class="log-terminal" id="logTerminal" style="display: none;">
+            <div class="terminal-header">
+                <span class="terminal-title">📟 REGISTRO DE COMBATE EN TIEMPO REAL</span>
+                <span class="blink-dot">● EN VIVO</span>
+            </div>
+            <div class="terminal-body" id="logBody">
+                <div class="log-line info">> Sistema táctico inicializado. Esperando comandos de ataque...</div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Modal de Leaderboard y Logros -->
+    <div class="modal-overlay" id="leaderboardModal" style="display: none;">
+        <div class="modal-content leaderboard-modal">
+            <h2>🏆 TABLA DE RÉCORDS & LOGROS 🏅</h2>
+            
+            <div style="margin-top: 15px;">
+                <h3 style="color: var(--cyan-glow); font-family: var(--font-heading); font-size: 1rem;">🥇 Top 10 Comandantes</h3>
+                <table class="leaderboard-table" id="leaderboardTable">
+                    <thead>
+                        <tr>
+                            <th>Jugador</th>
+                            <th>Victorias</th>
+                            <th>Derrotas</th>
+                            <th>Mejor Precisión</th>
+                            <th>Turnos Mín.</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+
+            <div style="margin-top: 25px;">
+                <h3 style="color: var(--purple-powerup); font-family: var(--font-heading); font-size: 1rem;">🎖️ Medallas y Logros</h3>
+                <div class="achievements-grid" id="achievementsGrid"></div>
+            </div>
+
+            <button class="btn btn-secondary" onclick="closeLeaderboard()" style="margin-top: 20px;">
+                Cerrar
+            </button>
+        </div>
+    </div>
+
+    <!-- Modal de Victoria / Derrota -->
+    <div class="modal-overlay" id="gameOverModal" style="display: none;">
+        <div class="modal-content victory-card">
+            <div class="trophy-icon" id="victoryIcon">🏆</div>
+            <h2 id="victoryTitle">¡VICTORIA ABSOLUTA!</h2>
+            <p id="victoryMessage">Has destruido toda la flota enemiga.</p>
+
+            <div class="stats-summary" id="finalStats"></div>
+
+            <button class="btn btn-primary btn-large" onclick="resetGame()">
+                🔄 JUGAR OTRA PARTIDA
+            </button>
+        </div>
+    </div>
+
+    <!-- Scripts del Juego -->
+    <script src="js/voice.js"></script>
+    <script src="js/sound.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
